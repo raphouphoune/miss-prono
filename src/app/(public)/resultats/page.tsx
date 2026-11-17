@@ -1,6 +1,7 @@
-import { CalendarDays, Crown, Radio, Trophy } from "lucide-react";
+import { CalendarDays, Crown, Heart, Radio, Trophy } from "lucide-react";
 import { LiveUpdates } from "@/components/results/live-updates";
 import { createPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type CandidateResult = {
   id: string;
@@ -17,6 +18,7 @@ type CeremonyEvent = {
   body: string | null;
   published_at: string;
 };
+type FavoriteRelation = Pick<CandidateResult, "id" | "name" | "region"> | Pick<CandidateResult, "id" | "name" | "region">[] | null;
 
 const stageLabels: Record<string, string> = {
   selection: "Sélection officielle",
@@ -63,6 +65,26 @@ export default async function ResultsPage() {
     (edition.status === "live" || edition.status === "completed") &&
     publicResults.length === 12 &&
     publicResults.every((result) => candidateById.has(result.candidate_id));
+  let personalFavorite: Pick<CandidateResult, "id" | "name" | "region"> | null = null;
+
+  if (canShowFinalResults) {
+    const userSupabase = await createServerSupabaseClient();
+    const { data: authData } = await userSupabase.auth.getClaims();
+    const userId = authData?.claims.sub;
+    if (userId) {
+      const { data: prediction } = await userSupabase
+        .from("predictions")
+        .select("favorite_candidate:candidates!predictions_favorite_candidate_id_edition_id_fkey(id,name,region)")
+        .eq("edition_id", edition.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      const relation = (prediction as { favorite_candidate?: FavoriteRelation } | null)?.favorite_candidate;
+      personalFavorite = Array.isArray(relation) ? relation[0] ?? null : relation ?? null;
+    }
+  }
+  const winner = canShowFinalResults
+    ? candidateById.get(publicResults.find((result) => result.final_rank === 1)?.candidate_id ?? "") ?? null
+    : null;
 
   return (
     <main className="section-wrap min-h-[70vh]">
@@ -112,6 +134,20 @@ export default async function ResultsPage() {
               );
             })}
           </ol>
+          {personalFavorite && winner && (
+            <aside className="mt-7 flex items-start gap-4 rounded-2xl border border-gold/25 bg-gold/[0.06] p-5 sm:p-6">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-gold/25 bg-black/20 text-gold"><Heart size={19} /></span>
+              <div>
+                <p className="section-eyebrow">Votre coup de cœur</p>
+                <h2 className="mt-1 font-display text-xl text-champagne">{personalFavorite.name} · Miss {personalFavorite.region}</h2>
+                <p className="mt-2 text-sm leading-6 text-white/60">
+                  {personalFavorite.id === winner.id
+                    ? `Bien vu : ton coup de cœur a remporté Miss France ${edition.year} !`
+                    : `La gagnante est ${winner.name}, Miss ${winner.region}.`}
+                </p>
+              </div>
+            </aside>
+          )}
         </section>
       ) : (
         <section className="mx-auto mb-16 max-w-2xl rounded-2xl border border-white/10 bg-surface/55 px-6 py-10 text-center">

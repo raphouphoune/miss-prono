@@ -4,6 +4,7 @@ export type PredictionPageData = {
   editionStatus: "upcoming" | "open" | "closed" | "unavailable";
   deadline: string | null;
   candidateSlugs: string[];
+  favoriteSlug: string | null;
   status: "draft" | "submitted";
   savedAt: string | null;
   canSaveDraft: boolean;
@@ -12,12 +13,14 @@ export type PredictionPageData = {
 
 type CandidateRelation = { slug: string } | { slug: string }[] | null;
 type ChoiceRow = { rank: number; candidate: CandidateRelation };
+type FavoriteRow = { slug: string } | { slug: string }[] | null;
 
 export async function getPredictionPageData2027(): Promise<PredictionPageData> {
   const unavailable: PredictionPageData = {
     editionStatus: "unavailable",
     deadline: null,
     candidateSlugs: [],
+    favoriteSlug: null,
     status: "draft",
     savedAt: null,
     canSaveDraft: false,
@@ -48,13 +51,16 @@ export async function getPredictionPageData2027(): Promise<PredictionPageData> {
 
   const { data: prediction, error: predictionError } = await supabase
     .from("predictions")
-    .select("id,status,updated_at")
+    .select("id,status,updated_at,favorite_candidate:candidates!predictions_favorite_candidate_id_edition_id_fkey(slug)")
     .eq("edition_id", edition.id)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (predictionError) return { ...unavailable, editionStatus };
-  if (!prediction) return { editionStatus, deadline, candidateSlugs: [], status: "draft", savedAt: null, canSaveDraft, canSubmit };
+  if (!prediction) return { editionStatus, deadline, candidateSlugs: [], favoriteSlug: null, status: "draft", savedAt: null, canSaveDraft, canSubmit };
+
+  const favoriteRelation = (prediction as { favorite_candidate?: FavoriteRow }).favorite_candidate;
+  const favoriteCandidate = Array.isArray(favoriteRelation) ? favoriteRelation[0] : favoriteRelation;
 
   const { data: choices, error: choicesError } = await supabase
     .from("prediction_choices")
@@ -74,6 +80,7 @@ export async function getPredictionPageData2027(): Promise<PredictionPageData> {
     editionStatus,
     deadline,
     candidateSlugs,
+    favoriteSlug: favoriteCandidate?.slug ?? null,
     status: prediction.status as "draft" | "submitted",
     savedAt: prediction.updated_at as string,
     canSaveDraft,

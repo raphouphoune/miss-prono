@@ -96,6 +96,8 @@ L'utilisateur doit pouvoir :
 - Voir le nombre de positions restantes.
 - Sauvegarder son brouillon.
 - Visualiser son classement avant validation définitive.
+- Choisir et enregistrer séparément un coup de cœur parmi toutes les candidates, qu'elle soit ou non dans son Top 12.
+- Générer sur son appareil une carte image de son coup de cœur ou de son Top 12 complet et la partager explicitement.
 
 La validation doit être impossible si les 12 positions ne sont pas correctement remplies.
 
@@ -120,6 +122,8 @@ Après la clôture :
 Cette confidentialité doit être garantie au niveau de Supabase et PostgreSQL, pas uniquement par l'interface frontend.
 
 La date et l'heure de clôture doivent être configurables par édition.
+
+Le coup de cœur est privé et modifiable pendant la période de préparation et jusqu'à la clôture, selon les mêmes règles que le brouillon. Après publication des résultats, l'utilisateur connecté peut voir si sa favorite a remporté l'élection. Le partage génère une image localement; aucune page publique ni aucun endpoint ne révèle le pronostic. L'interface avertit avant de générer le Top 12 que le destinataire verra les choix si l'utilisateur le partage.
 
 ## Ligues privées
 

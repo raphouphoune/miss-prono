@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Check, Crown, GripVertical, LockKeyhole, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Crown, GripVertical, Heart, LockKeyhole, Plus, Search, Trash2, X } from "lucide-react";
 import type { Candidate } from "@/types";
 import { isCompletePrediction, readLocalPrediction } from "@/features/predictions/local-draft";
-import { savePrediction } from "@/features/predictions/actions";
+import { saveFavoriteCandidate, savePrediction } from "@/features/predictions/actions";
 import type { PredictionPageData } from "@/features/predictions/repository";
+import { PredictionShare } from "@/components/predictions/prediction-share";
 
 const places = [
   "Miss France",
@@ -44,6 +45,11 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
   const [actionMessage, setActionMessage] = useState("");
   const [actionError, setActionError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [favoriteSlug, setFavoriteSlug] = useState(prediction.favoriteSlug ?? "");
+  const [savedFavoriteSlug, setSavedFavoriteSlug] = useState(prediction.favoriteSlug ?? "");
+  const [savingFavorite, setSavingFavorite] = useState(false);
+  const [favoriteMessage, setFavoriteMessage] = useState("");
+  const [favoriteError, setFavoriteError] = useState(false);
   const canModify = prediction.canSaveDraft && status !== "submitted" && !saving;
 
   const regions = useMemo(
@@ -54,6 +60,8 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
   const selectedCandidates = selectedIds
     .map((id) => candidates.find((candidate) => candidate.id === id))
     .filter((candidate): candidate is Candidate => Boolean(candidate));
+  const favoriteCandidate = candidates.find((candidate) => candidate.slug === favoriteSlug) ?? null;
+  const canEditFavorite = prediction.canSaveDraft && status !== "submitted" && !savingFavorite;
 
   const availableCandidates = useMemo(() => {
     const search = normalize(query.trim());
@@ -131,6 +139,23 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
     setDirty(false);
     setActionMessage(result.status === "submitted" ? "Ton pronostic est confirmé et reste privé jusqu’à la clôture." : "Brouillon enregistré sur ton compte.");
     if (result.status === "submitted") setReviewing(false);
+  }
+
+  async function saveFavorite() {
+    if (!canEditFavorite || favoriteSlug === savedFavoriteSlug) return;
+    setSavingFavorite(true);
+    setFavoriteMessage("");
+    setFavoriteError(false);
+    const result = await saveFavoriteCandidate(favoriteSlug || null);
+    setSavingFavorite(false);
+    if (!result.ok) {
+      setFavoriteMessage(result.message);
+      setFavoriteError(true);
+      return;
+    }
+    setSavedFavoriteSlug(favoriteSlug);
+    setSavedAt(new Date().toISOString());
+    setFavoriteMessage(favoriteSlug ? "Ton coup de cœur est enregistré et privé jusqu’à la clôture." : "Ton coup de cœur a été retiré.");
   }
 
   function confirmPrediction() {
@@ -286,6 +311,33 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
           </div>
         </aside>
       </div>
+
+      <section aria-labelledby="favorite-title" className="mt-6 rounded-2xl border border-gold/20 bg-[linear-gradient(120deg,#1c1913,#141210)] p-5 sm:p-7">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/25 bg-gold/[0.07] text-gold"><Heart size={19} /></span>
+            <div>
+              <p className="section-eyebrow">En dehors du classement</p>
+              <h2 id="favorite-title" className="mt-1 font-display text-2xl text-champagne sm:text-3xl">Votre coup de cœur</h2>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-white/50">Choisissez votre candidate favorite, même si elle ne figure pas dans votre Top 12. Ce choix reste privé.</p>
+            </div>
+          </div>
+          <div className="grid w-full gap-2 sm:max-w-xl sm:grid-cols-[minmax(0,1fr)_auto]">
+            <label>
+              <span className="sr-only">Choisir son coup de cœur</span>
+              <select value={favoriteSlug} onChange={(event) => { setFavoriteSlug(event.target.value); setFavoriteMessage(""); setFavoriteError(false); }} disabled={!canEditFavorite} className="h-11 w-full rounded-xl border border-white/10 bg-[#171614] px-4 text-sm text-ivory outline-none transition focus:border-gold/55 focus:ring-2 focus:ring-gold/15 disabled:opacity-55">
+                <option value="">Choisir une candidate</option>
+                {candidates.map((candidate) => <option key={candidate.id} value={candidate.slug}>{candidate.name} · {candidate.region}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={() => void saveFavorite()} disabled={!canEditFavorite || favoriteSlug === savedFavoriteSlug} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gold px-4 text-sm font-semibold text-[#17130c] transition hover:bg-[#ddbd7e] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/35">
+              <Heart size={15} /> {savingFavorite ? "Enregistrement…" : favoriteSlug === savedFavoriteSlug ? "Enregistré" : "Enregistrer"}
+            </button>
+          </div>
+        </div>
+        <p aria-live="polite" className={`mt-3 min-h-4 text-xs ${favoriteError ? "text-red-200/80" : "text-white/45"}`}>{favoriteMessage || (favoriteSlug !== savedFavoriteSlug ? "Ton choix n’est pas encore enregistré." : prediction.editionStatus === "closed" ? "Le choix enregistré est conservé après la clôture." : "Tu pourras le modifier jusqu’à la clôture des pronostics.")}</p>
+        <PredictionShare favorite={favoriteCandidate} ranking={selectedCandidates} beforeDeadline={prediction.editionStatus === "upcoming" || prediction.editionStatus === "open"} />
+      </section>
 
       <p className="sr-only" aria-live="polite">{announcement}</p>
       <p className="mt-5 text-center text-xs leading-5 text-white/35">Glissez les candidates pour modifier leur ordre, ou utilisez les flèches pour les déplacer. Consultez les <Link href="/candidates" className="text-gold underline underline-offset-4">profils des candidates</Link>.</p>

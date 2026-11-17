@@ -64,6 +64,8 @@ Les groupes de routes entre parenthèses organisent les pages sans ajouter ces n
 - Galerie responsive des 31 candidates Miss France 2027 avec portraits, recherche et filtre par région
 - Fiches détaillées : âge, taille, ville, élection régionale, études, métier, passions, engagements, parcours et Instagram lorsqu'ils sont publiés
 - Composeur Top 12 connecté à Supabase : brouillons privés, validation atomique et verrouillage à la clôture
+- Coup de cœur indépendant du Top 12, enregistré de façon privée et comparé à Miss France après publication des résultats
+- Cartes image de partage du coup de cœur ou du Top 12, générées localement avec avertissement de confidentialité avant clôture
 - Ligues privées connectées à Supabase : création, adhésion par code, liste des membres et partage du code
 - Page résultats officielle et fil des annonces de cérémonie avec mises à jour en direct pendant l'édition live
 - Back-office admin : gestion du Top 12 officiel, barème, annonces de soirée et calcul des scores
