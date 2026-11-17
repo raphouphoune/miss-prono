@@ -73,7 +73,7 @@ export default async function AdminCandidatesPage({ searchParams }: { searchPara
               <Link key={candidate.id} href={`/admin/candidates/${candidate.id}`} className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-surface/50 p-3 transition hover:border-gold/30 hover:bg-surface">
                 {candidate.photo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={candidate.photo_url} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
+                  <img src={candidate.photo_url} alt="" className="size-14 shrink-0 rounded-xl object-cover object-top" />
                 ) : <span className="grid size-14 shrink-0 place-items-center rounded-xl bg-white/[0.04] text-muted"><UserRound size={20} /></span>}
                 <span className="min-w-0 flex-1"><span className="block truncate font-medium text-ivory">{candidate.name}</span><span className="mt-1 block truncate text-xs text-muted">{String(candidate.candidate_number).padStart(2, "0")} · {candidate.region}</span></span>
                 <ArrowRight size={16} className="shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-gold" />

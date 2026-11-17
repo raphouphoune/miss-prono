@@ -39,7 +39,7 @@ export default async function CandidateProfilePage({ params }: CandidatePageProp
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-stretch">
         <div className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-3xl border border-gold/20 bg-[#211a12] lg:max-w-none">
-          <Image src={candidate.imageSrc} alt={`Portrait de ${candidate.name}, Miss ${candidate.region} 2027`} fill priority sizes="(max-width: 1023px) 100vw, 45vw" className="object-cover" />
+          <Image src={candidate.imageSrc} alt={`Portrait de ${candidate.name}, Miss ${candidate.region} 2027`} fill priority sizes="(max-width: 1023px) 100vw, 45vw" className="object-cover object-top" />
           <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/15" />
           <span className="absolute left-5 top-5 rounded-full border border-gold/25 bg-black/35 px-3 py-1.5 text-[10px] font-semibold tracking-[0.18em] text-champagne backdrop-blur">N° {String(candidate.number).padStart(2, "0")}</span>
           <p className="absolute inset-x-4 bottom-4 text-center font-display text-2xl text-white drop-shadow sm:text-3xl">Miss {candidate.region}</p>

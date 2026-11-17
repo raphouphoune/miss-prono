@@ -52,7 +52,7 @@ export default async function EditCandidatePage({ params, searchParams }: { para
           <div>
             {candidate.photo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={candidate.photo_url} alt={`Portrait actuel de ${candidate.name}`} className="aspect-[3/4] w-full rounded-2xl border border-white/10 object-cover" />
+              <img src={candidate.photo_url} alt={`Portrait actuel de ${candidate.name}`} className="aspect-[3/4] w-full rounded-2xl border border-white/10 object-cover object-top" />
             ) : <div className="grid aspect-[3/4] place-items-center rounded-2xl border border-dashed border-white/15 text-sm text-muted">Aucun portrait</div>}
           </div>
           <div className="flex flex-col justify-center">

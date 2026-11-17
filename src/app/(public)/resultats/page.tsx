@@ -101,7 +101,7 @@ export default async function ResultsPage() {
                   </span>
                   {candidate.photo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={candidate.photo_url} alt="" className="size-14 rounded-xl object-cover sm:size-16" />
+                    <img src={candidate.photo_url} alt="" className="size-14 rounded-xl object-cover object-top sm:size-16" />
                   ) : <span className="grid size-14 place-items-center rounded-xl bg-white/[0.04] text-muted">{String(candidate.candidate_number).padStart(2, "0")}</span>}
                   <div className="min-w-0">
                     <p className={`truncate font-display text-xl ${result.final_rank === 1 ? "text-champagne sm:text-2xl" : "text-ivory"}`}>{candidate.name}</p>

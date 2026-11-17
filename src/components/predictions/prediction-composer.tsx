@@ -205,7 +205,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
               const full = selectedIds.length >= 12;
               return (
                 <div key={candidate.id} className="flex items-center gap-3 py-3 first:pt-0 sm:gap-4">
-                  <Image src={candidate.imageSrc} alt="" width={48} height={60} className="h-[60px] w-12 shrink-0 rounded-lg object-cover" />
+                  <Image src={candidate.imageSrc} alt="" width={48} height={60} className="h-[60px] w-12 shrink-0 rounded-lg object-cover object-top" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-ivory">{candidate.name}</p>
                     <p className="mt-1 truncate text-xs text-white/45">{candidate.region}{candidate.age ? ` · ${candidate.age} ans` : ""}</p>
@@ -237,7 +237,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
                   {candidate ? (
                     <div draggable={canModify} onDragStart={(event) => { setDraggedId(candidate.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", candidate.id); }} onDragEnd={() => setDraggedId(null)} className={`flex min-h-[72px] items-center gap-2.5 px-3 py-2 sm:gap-3 ${draggedId === candidate.id ? "opacity-40" : ""}`}>
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gold/25 font-display text-lg text-gold">{index + 1}</span>
-                      <Image src={candidate.imageSrc} alt="" width={42} height={52} className="h-[52px] w-[42px] shrink-0 rounded-md object-cover" />
+                      <Image src={candidate.imageSrc} alt="" width={42} height={52} className="h-[52px] w-[42px] shrink-0 rounded-md object-cover object-top" />
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">{placeTitle(index)}</p>
                         <p className="mt-1 truncate text-sm font-medium text-ivory">{candidate.name}</p>

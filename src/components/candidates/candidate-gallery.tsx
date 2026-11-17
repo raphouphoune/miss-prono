@@ -17,7 +17,7 @@ function CandidateCard({ candidate }: { candidate: Candidate }) {
   return (
     <Link href={`/candidates/${candidate.slug}`} aria-label={`Découvrir le profil de ${candidate.name}`} className="group block overflow-hidden rounded-2xl border border-white/[0.09] bg-[#171614] transition duration-300 hover:-translate-y-1 hover:border-gold/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold">
       <div className="relative aspect-[4/5] overflow-hidden bg-[#211a12]">
-        <Image src={candidate.imageSrc} alt={`Portrait de ${candidate.name}, Miss ${candidate.region} 2027`} fill sizes="(max-width: 479px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+        <Image src={candidate.imageSrc} alt={`Portrait de ${candidate.name}, Miss ${candidate.region} 2027`} fill sizes="(max-width: 479px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw" className="object-cover object-top transition duration-500 group-hover:scale-[1.03]" />
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#11100e] via-transparent to-black/20" />
 
         <span className="absolute left-4 top-4 rounded-full border border-gold/25 bg-black/35 px-3 py-1.5 text-[10px] font-semibold tracking-[0.18em] text-champagne backdrop-blur">
