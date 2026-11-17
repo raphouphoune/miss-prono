@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --background: #101010;
+  --foreground: #f7f3eb;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-black: #101010;
+  --color-surface: #1b1a18;
+  --color-gold: #c8a45d;
+  --color-gold-light: #e1bd78;
+  --color-champagne: #e8d9bc;
+  --color-ivory: #f7f3eb;
+  --color-muted: #96918a;
+  --font-display: var(--font-display-family);
+  --font-body: var(--font-body-family);
+  --shadow-gold: 0 8px 30px rgba(200, 164, 93, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body-family), Arial, sans-serif;
+}
+
+::selection {
+  background: rgba(200, 164, 93, 0.35);
+  color: #fff;
+}
+
+.font-display {
+  font-family: var(--font-display-family), Georgia, serif;
+}
+
+.gold-text {
+  background: linear-gradient(110deg, #f1dcae 5%, #c8a45d 48%, #f2dca9 92%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.section-wrap {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding: 4rem 1rem;
+}
+
+.section-eyebrow {
+  color: #c8a45d;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.section-title {
+  margin-top: 0.75rem;
+  font-family: var(--font-display-family), Georgia, serif;
+  font-size: clamp(2.2rem, 4vw, 3.5rem);
+  line-height: 1.05;
+  color: #e8d9bc;
+}
+
+.legal-panel {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1rem;
+  background: rgba(27, 26, 24, 0.55);
+  padding: 1.25rem;
+  color: rgba(247, 243, 235, 0.72);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.legal-panel h2 {
+  margin-bottom: 0.65rem;
+  color: #e8d9bc;
+  font-family: var(--font-display-family), Georgia, serif;
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+.legal-panel ul {
+  margin-left: 1.25rem;
+  list-style: disc;
+}
+
+.legal-panel dl {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.legal-panel dt {
+  color: rgba(247, 243, 235, 0.5);
+  font-size: 0.75rem;
+}
+
+.legal-panel dd {
+  color: #e8d9bc;
+}
+
+@media (min-width: 640px) {
+  .legal-panel {
+    padding: 1.75rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .section-wrap {
+    padding-block: 5rem;
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .section-wrap {
+    padding-block: 6rem;
+    padding-inline: 2rem;
+  }
+}

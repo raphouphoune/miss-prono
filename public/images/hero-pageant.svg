@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 900" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="350" y1="0" x2="350" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9A7440"/>
+      <stop offset=".45" stop-color="#382819"/>
+      <stop offset="1" stop-color="#090909"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="170" y1="120" x2="540" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5DEAA"/>
+      <stop offset=".5" stop-color="#C8A45D"/>
+      <stop offset="1" stop-color="#8D642C"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="matrix(0 440 -300 0 350 150)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F3D59B" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#F3D59B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="700" height="900" fill="url(#bg)"/>
+  <rect width="700" height="900" fill="url(#glow)"/>
+  <g opacity=".65" fill="#F7E3B8">
+    <circle cx="108" cy="180" r="3"/><circle cx="570" cy="135" r="4"/><circle cx="520" cy="280" r="2"/>
+    <circle cx="150" cy="380" r="2"/><circle cx="610" cy="470" r="3"/><circle cx="90" cy="560" r="2"/>
+    <circle cx="560" cy="680" r="2"/><circle cx="210" cy="720" r="3"/>
+  </g>
+  <path d="M170 255 225 145l78 83 48-143 48 143 78-83 55 110-181 85-181-85Z" stroke="url(#gold)" stroke-width="9" stroke-linejoin="round"/>
+  <path d="m170 255 181 85 181-85" stroke="#F0D59D" stroke-width="4"/>
+  <g fill="#F1D9A8">
+    <circle cx="225" cy="145" r="12"/><circle cx="351" cy="85" r="14"/><circle cx="477" cy="145" r="12"/>
+  </g>
+  <ellipse cx="350" cy="830" rx="230" ry="32" fill="#C8A45D" fill-opacity=".12"/>
+  <path d="M350 390c-63 0-108 48-108 116 0 49 22 80 49 103-13 37-31 76-64 117-37 45-60 94-67 144h380c-7-50-30-99-67-144-33-41-51-80-64-117 27-23 49-54 49-103 0-68-45-116-108-116Z" fill="#090909" fill-opacity=".88" stroke="#C8A45D" stroke-opacity=".5" stroke-width="3"/>
+  <path d="M245 630c32 24 70 37 105 37s73-13 105-37" stroke="url(#gold)" stroke-width="5"/>
+  <path d="M270 655 350 820l80-165" stroke="#C8A45D" stroke-opacity=".65" stroke-width="3"/>
+  <path d="M350 390v-45" stroke="#E8D9BC" stroke-opacity=".6" stroke-width="2"/>
+  <text x="350" y="875" fill="#E8D9BC" fill-opacity=".7" font-family="Georgia,serif" font-size="17" letter-spacing="7" text-anchor="middle">MISS PRONO</text>
+</svg>

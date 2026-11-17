@@ -1,0 +1,5 @@
+project_id = "miss-prono"
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
