@@ -3,29 +3,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-function parseParisDateTime(value: string): string | null | undefined {
-  if (!value) return null;
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
-  if (!match) return undefined;
-
-  const [year, month, day, hour, minute] = match.slice(1).map(Number);
-  const targetWallTime = Date.UTC(year, month - 1, day, hour, minute);
-  const formatParts = (date: Date) => new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Paris",
-    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-  }).formatToParts(date);
-  const partsToValues = (parts: Intl.DateTimeFormatPart[]) => Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  const guessParts = partsToValues(formatParts(new Date(targetWallTime)));
-  const guessedWallTime = Date.UTC(Number(guessParts.year), Number(guessParts.month) - 1, Number(guessParts.day), Number(guessParts.hour), Number(guessParts.minute));
-  const utcTimestamp = targetWallTime - (guessedWallTime - targetWallTime);
-  const actual = partsToValues(formatParts(new Date(utcTimestamp)));
-  if (
-    Number(actual.year) !== year || Number(actual.month) !== month || Number(actual.day) !== day ||
-    Number(actual.hour) !== hour || Number(actual.minute) !== minute
-  ) return undefined;
-  return new Date(utcTimestamp).toISOString();
-}
-
 async function getAdminEdition() {
   const supabase = await createServerSupabaseClient();
   const { data: authData } = await supabase.auth.getClaims();
@@ -42,13 +19,12 @@ async function getAdminEdition() {
   if (error || !edition) redirect("/admin?status=unavailable");
   return { supabase, edition };
 }
-
 export async function saveOfficialResults(formData: FormData) {
   const candidateIds = formData.getAll("candidate_ids").map((value) => String(value));
   if (
-    candidateIds.length !== 12 ||
+    candidateIds.length !== 5 ||
     candidateIds.some((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) ||
-    new Set(candidateIds).size !== 12
+    new Set(candidateIds).size !== 5
   ) {
     redirect("/admin?status=invalid-results");
   }
@@ -74,17 +50,18 @@ export async function saveScoringRules(formData: FormData) {
   const rawValues = rawPoints.map((value) => String(value).trim());
   const points = rawValues.map(Number);
   if (
-    points.length !== 12 ||
+    points.length !== 6 ||
     rawValues.some((value) => !/^\d+$/.test(value)) ||
     points.some((point) => !Number.isSafeInteger(point) || point < 0 || point > 2_147_483_647)
   ) {
     redirect("/admin?status=invalid-rules");
   }
+  const expandedPoints = [...points.slice(0, 5), ...Array.from({ length: 7 }, () => points[5])];
 
   const { supabase, edition } = await getAdminEdition();
   const { error } = await supabase.rpc("admin_save_scoring_rules", {
     target_edition_id: edition.id,
-    points_by_rank: points,
+    points_by_rank: expandedPoints,
   });
   if (error) {
     console.error("admin_save_scoring_rules failed", { code: error.code, message: error.message });
@@ -126,29 +103,4 @@ export async function saveCeremonyEvent(formData: FormData) {
     redirect("/admin?status=event-error");
   }
   redirect(`/admin?status=${publish ? "event-published" : "event-saved"}`);
-}
-
-export async function updateEditionTimeline(formData: FormData) {
-  const status = String(formData.get("status") ?? "");
-  const allowedStatuses = ["upcoming", "open", "locked", "live", "completed"];
-  const deadline = parseParisDateTime(String(formData.get("predictions_deadline") ?? ""));
-  const ceremonyAt = parseParisDateTime(String(formData.get("ceremony_at") ?? ""));
-  if (!allowedStatuses.includes(status) || deadline === undefined || ceremonyAt === undefined) {
-    redirect("/admin?status=invalid-edition");
-  }
-
-  const { supabase, edition } = await getAdminEdition();
-  const { error } = await supabase.rpc("admin_update_edition_timeline", {
-    target_edition_id: edition.id,
-    target_status: status,
-    target_predictions_deadline: deadline,
-    target_ceremony_at: ceremonyAt,
-  });
-  if (error) {
-    console.error("admin_update_edition_timeline failed", { code: error.code, message: error.message });
-    if (error.code === "42501") redirect("/");
-    if (error.message.includes("Publish the 12 official results")) redirect("/admin?status=edition-results-required");
-    redirect("/admin?status=invalid-edition-phase");
-  }
-  redirect("/admin?status=edition-saved");
 }

@@ -1,5 +1,6 @@
 import { CalendarDays, Crown, Heart, Radio, Trophy } from "lucide-react";
 import { LiveUpdates } from "@/components/results/live-updates";
+import { PhaseRefresh } from "@/components/editions/phase-refresh";
 import { createPublicSupabaseClient } from "@/lib/supabase/public-client";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -17,6 +18,8 @@ type CeremonyEvent = {
   title: string;
   body: string | null;
   published_at: string;
+  candidate_id: string | null;
+  official_rank: number | null;
 };
 type FavoriteRelation = Pick<CandidateResult, "id" | "name" | "region"> | Pick<CandidateResult, "id" | "name" | "region">[] | null;
 
@@ -25,6 +28,7 @@ const stageLabels: Record<string, string> = {
   semi_finalists: "Demi-finalistes",
   finalists: "Finalistes",
   winner: "Résultat final",
+  placement: "Classement officiel",
   custom: "Annonce",
 };
 
@@ -48,14 +52,17 @@ export default async function ResultsPage() {
       .order("final_rank", { ascending: true }),
     supabase
       .from("ceremony_events")
-      .select("id,stage,title,body,published_at")
+      .select("id,stage,title,body,published_at,candidate_id,official_rank")
       .eq("edition_id", edition.id)
       .eq("status", "published")
       .order("published_at", { ascending: false }),
   ]);
 
   const publicResults = ((resultRows ?? []) as ResultRow[]).filter((result) => result.published);
-  const candidateIds = publicResults.map((result) => result.candidate_id);
+  const candidateIds = [...new Set([
+    ...publicResults.map((result) => result.candidate_id),
+    ...((events ?? []) as CeremonyEvent[]).filter((event) => event.stage === "semi_finalists" && event.candidate_id).map((event) => event.candidate_id as string),
+  ])];
   const { data: candidates } = candidateIds.length
     ? await supabase.from("candidates").select("id,candidate_number,name,region,photo_url").in("id", candidateIds)
     : { data: [] as CandidateResult[] };
@@ -63,7 +70,7 @@ export default async function ResultsPage() {
   const isLive = edition.status === "live";
   const canShowFinalResults =
     (edition.status === "live" || edition.status === "completed") &&
-    publicResults.length === 12 &&
+    publicResults.length === 5 &&
     publicResults.every((result) => candidateById.has(result.candidate_id));
   let personalFavorite: Pick<CandidateResult, "id" | "name" | "region"> | null = null;
 
@@ -88,6 +95,7 @@ export default async function ResultsPage() {
 
   return (
     <main className="section-wrap min-h-[70vh]">
+      <PhaseRefresh />
       <header className="mb-10 border-b border-white/10 pb-8 text-center">
         <p className="section-eyebrow">Miss France {edition.year}</p>
         <h1 className="section-title">Résultats <span className="gold-text italic">officiels.</span></h1>
@@ -108,7 +116,7 @@ export default async function ResultsPage() {
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
               <p className="section-eyebrow">Classement final</p>
-              <h2 id="official-ranking-title" className="mt-2 font-display text-3xl text-champagne">Les 12 candidates classées</h2>
+              <h2 id="official-ranking-title" className="mt-2 font-display text-3xl text-champagne">Les cinq places officielles</h2>
             </div>
             <Trophy className="hidden text-gold sm:block" size={25} />
           </div>
@@ -157,6 +165,22 @@ export default async function ResultsPage() {
             Aucun classement final complet n’a encore été confirmé. Les annonces vérifiées de la soirée apparaîtront ci-dessous.
           </p>
           {edition.ceremony_at && <p className="mt-5 inline-flex items-center gap-2 text-xs text-muted"><CalendarDays size={14} /> {new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "Europe/Paris" }).format(new Date(edition.ceremony_at))}</p>}
+        </section>
+      )}
+
+      {((events ?? []) as CeremonyEvent[]).some((event) => event.stage === "semi_finalists") && (
+        <section className="mb-16" aria-labelledby="top12-title">
+          <p className="section-eyebrow">Sélection officielle de la soirée</p>
+          <h2 id="top12-title" className="mt-2 font-display text-3xl text-champagne">Les demi-finalistes</h2>
+          <p className="mt-2 text-sm text-muted">Le Top 12 est annoncé sans ordre de classement.</p>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{((events ?? []) as CeremonyEvent[]).filter((event) => event.stage === "semi_finalists").map((event) => {
+            const candidate = event.candidate_id ? candidateById.get(event.candidate_id) : null;
+            if (!candidate) return null;
+            return <li key={event.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-surface/50 p-3">{candidate.photo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={candidate.photo_url} alt="" className="size-12 rounded-lg object-cover object-top" />
+            ) : <span className="grid size-12 place-items-center rounded-lg bg-white/[0.04] text-muted">{String(candidate.candidate_number).padStart(2, "0")}</span>}<span><strong className="block text-sm text-ivory">{candidate.name}</strong><span className="text-xs text-muted">Miss {candidate.region}</span></span></li>;
+          })}</ul>
         </section>
       )}
 

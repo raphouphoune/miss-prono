@@ -1,7 +1,7 @@
 import type { Feature, LeaderboardEntry } from "@/types";
 
 export const demoLeaderboard: LeaderboardEntry[] = [
-  { rank: 1, username: "Lauuurette", initials: "L", points: 370, trend: "up" },
+  { rank: 1, username: "Lauuurette", initials: "L", points: 420, trend: "up" },
   { rank: 2, username: "MissDream", initials: "M", points: 360, trend: "same" },
   { rank: 3, username: "MarineProno", initials: "M", points: 350, trend: "up" },
   { rank: 4, username: "Charlotte_12", initials: "C", points: 340, trend: "down" },

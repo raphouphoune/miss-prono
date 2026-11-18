@@ -6,13 +6,15 @@ type LeaderboardRow = {
   username: string;
   total_points: number;
   exact_positions: number;
+  top12_hits: number;
+  is_provisional: boolean;
 };
 
 export default async function LeaderboardPage() {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("leaderboard")
-    .select("player_rank,username,total_points,exact_positions")
+    .select("player_rank,username,total_points,exact_positions,top12_hits,is_provisional")
     .eq("edition_year", 2027)
     .order("player_rank", { ascending: true });
   const players = (data ?? []) as LeaderboardRow[];
@@ -38,7 +40,7 @@ export default async function LeaderboardPage() {
           <span className="mx-auto grid size-14 place-items-center rounded-2xl border border-gold/20 bg-gold/[0.06] text-gold"><Trophy size={25} /></span>
           <h2 className="mt-5 font-display text-3xl text-champagne">Le classement se prépare</h2>
           <p className="mt-3 text-sm leading-6 text-muted">
-            Les scores apparaîtront après la publication des 12 résultats officiels et le calcul des pronostics.
+            Les scores apparaîtront dès les premières annonces de la cérémonie.
           </p>
           <p className="mt-5 text-xs uppercase tracking-[0.16em] text-muted/75">Miss France 2027</p>
         </div>
@@ -54,7 +56,7 @@ export default async function LeaderboardPage() {
                     <Icon size={actualRank === 1 ? 24 : 20} className="text-gold" />
                     <p className="mt-3 max-w-full truncate font-display text-lg text-champagne sm:text-2xl">{player.username}</p>
                     <p className="mt-1 font-semibold text-ivory">{player.total_points} pts</p>
-                    <p className="mt-1 text-xs text-muted">{player.exact_positions} exact{player.exact_positions > 1 ? "s" : ""}</p>
+                    <p className="mt-1 text-xs text-muted">{player.top12_hits} Top 12 · {player.exact_positions} place{player.exact_positions > 1 ? "s" : ""} exacte{player.exact_positions > 1 ? "s" : ""}</p>
                   </article>
                 );
               })}
@@ -68,7 +70,7 @@ export default async function LeaderboardPage() {
                   <tr>
                     <th className="px-5 py-4 font-medium sm:px-7">Rang</th>
                     <th className="px-4 py-4 font-medium">Joueur</th>
-                    <th className="px-4 py-4 text-right font-medium">Positions exactes</th>
+                    <th className="px-4 py-4 text-right font-medium">Top 12 / Top 5 exact</th>
                     <th className="px-5 py-4 text-right font-medium sm:px-7">Points</th>
                   </tr>
                 </thead>
@@ -77,7 +79,7 @@ export default async function LeaderboardPage() {
                     <tr key={`${player.username}-${player.player_rank}`} className="border-t border-white/[0.06]">
                       <td className="px-5 py-4 font-mono text-gold sm:px-7">{String(player.player_rank).padStart(2, "0")}</td>
                       <td className="px-4 py-4 font-medium text-ivory">{player.username}</td>
-                      <td className="px-4 py-4 text-right text-muted">{player.exact_positions} / 12</td>
+                      <td className="px-4 py-4 text-right text-muted">{player.top12_hits} / 12 · {player.exact_positions} / 5</td>
                       <td className="px-5 py-4 text-right font-semibold text-champagne sm:px-7">{player.total_points}</td>
                     </tr>
                   ))}
@@ -85,7 +87,7 @@ export default async function LeaderboardPage() {
               </table>
             </div>
           </div>
-          <p className="mt-4 text-center text-xs text-muted">Classement calculé à partir des résultats officiels publiés.</p>
+          <p className="mt-4 text-center text-xs text-muted">Les points Top 12 valent 10 chacun; le Top 5 est compté selon le rang exact. {players.some((player) => player.is_provisional) ? "Classement provisoire, mis à jour à chaque annonce." : "Classement final."}</p>
         </>
       )}
     </main>

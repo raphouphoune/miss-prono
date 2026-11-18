@@ -198,16 +198,16 @@ Barème de départ proposé :
 | Deuxième dauphine | 50 |
 | Troisième dauphine | 50 |
 | Quatrième dauphine | 50 |
-| Positions 6 à 12 | 10 par position |
+| Candidate correctement trouvée dans le Top 12 | 10 par candidate, quel que soit son ordre annoncé |
 
-Le score maximal théorique est donc de 370 points.
+Les cinq rangs sont exacts et rapportent leurs points en plus des points de présence dans le Top 12. Le score maximal théorique est donc de 420 points.
 
 Règle :
-- Une candidate correctement identifiée à la bonne position rapporte les points associés.
-- Une candidate placée au mauvais rang ne rapporte aucun point.
-- Les points ne sont pas cumulés deux fois entre le Top 5 et le Top 12.
+- Chaque candidate du Top 12 correctement sélectionnée rapporte 10 points, indépendamment de son ordre d'annonce.
+- Les places exactes du Top 5 rapportent en plus 100 points pour la gagnante et 50 points pour chaque dauphine.
+- Les annonces de demi-finalistes sont aléatoires; aucun rang fictif n'est attribué aux places 6 à 12.
 
-Ce barème a été approuvé par le propriétaire du produit le 17 novembre 2026 pour la V1. Il est stocké en base de données, préconfiguré pour l'édition 2027 et modifiable par un administrateur pour cette édition.
+Le barème Top 5 historique a été adapté avec l'accord du propriétaire du produit le 18 novembre 2026 pour tenir compte de l'annonce aléatoire du Top 12. Les règles sont stockées en base et modifiables par un administrateur pour l'édition.
 
 Prévoir des tests automatisés pour tous les cas de calcul.
 
@@ -661,7 +661,7 @@ Page centrale de l'application.
 - Gestion des éditions.
 - Gestion des candidates.
 - Gestion des utilisateurs si nécessaire.
-- Gestion des dates.
+- Affichage du calendrier et des phases automatiques de l’édition.
 - Gestion des résultats.
 - Gestion du barème.
 - Gestion des étapes de cérémonie.
@@ -751,11 +751,11 @@ Les données des candidates de l'édition 2027 sont lues depuis Supabase sur la 
 
 Supabase Auth est connecté pour l'inscription et la connexion par email et mot de passe. L'inscription collecte prénom, nom et pseudo; une migration dédiée stocke le pseudo dans `profiles` et les noms dans `private_profiles` protégée par RLS. Une page profil permet leur consultation et leur modification. Pour la V1, la confirmation email peut être désactivée dans le fournisseur Email Supabase afin de connecter immédiatement les nouveaux comptes. Si elle est activée, le flux de confirmation utilise une page intermédiaire anti-préchargement et accepte le callback PKCE. Les sessions sont stockées dans des cookies et renouvelées par le proxy Next.js. Les routes pronostics, ligues et profil demandent une session authentifiée.
 
-Les brouillons et soumissions de pronostics sont enregistrés dans Supabase via une fonction transactionnelle et des politiques RLS. Les brouillons sont permis pendant l'état `upcoming`; la soumission exige l'état `open` et une échéance future. La page `/ligues` est connectée à Supabase : un membre peut créer une ligue, la rejoindre avec un code d'invitation et consulter ses membres. Les fonctions SQL autorisent création et adhésion pendant `upcoming` ou `open` tant que l'échéance n'est pas dépassée (ou qu'elle est absente en `upcoming`). Les codes restent visibles aux membres de chaque ligue. La page prévoit les colonnes points et exactitude, qui se remplissent quand les scores sont publiés.
+Les brouillons et soumissions de pronostics sont enregistrés dans Supabase via une fonction transactionnelle et des politiques RLS. Une soumission reste modifiable par son propriétaire jusqu'à l'échéance; l'enregistrement conserve son statut soumis et sa confidentialité. À la clôture, les fonctions SQL verrouillent immédiatement le Top 12 et le coup de cœur. La page `/ligues` est connectée à Supabase : un membre peut créer une ligue, la rejoindre avec un code d'invitation et consulter ses membres. Les fonctions SQL autorisent création et adhésion pendant `upcoming` ou `open` tant que l'échéance n'est pas dépassée (ou qu'elle est absente en `upcoming`). Les codes restent visibles aux membres de chaque ligue. La page prévoit les colonnes points et exactitude, qui se remplissent quand les scores sont publiés.
 
-Le scoring se calcule en base à partir des résultats publiés et des règles configurées pour chaque rang. Le barème V1 approuvé est 100 points au rang 1, 50 aux rangs 2 à 5, et 10 aux rangs 6 à 12 (370 points maximum); une migration le configure pour Miss France 2027. La fonction `calculate_edition_scores` est réservée aux admins, exige la clôture, l'état `live`/`completed`, 12 résultats publiés et 12 règles; elle est idempotente et permet le recalcul après correction. La page admin `/admin` permet de saisir les 12 candidates du classement final, enregistrer celui-ci en brouillon ou le publier après clôture, configurer les 12 valeurs de points et déclencher le calcul. Ces mutations passent par des fonctions SQL admin-only transactionnelles et invalident les scores existants lorsque les résultats ou le barème changent. Le classement public `/classement` lit une vue limitée aux pseudos et aux scores et demeure masqué jusqu'à la clôture et la publication complète des résultats.
+Le relais de cérémonie `/annonceur` est réservé aux admins et aux comptes autorisés par un admin depuis `/admin/annonciateurs`. Il publie successivement les 12 demi-finalistes sans rang, les cinq finalistes, puis leurs places officielles de la 5e à la 1re. Chaque publication recalcule immédiatement les scores; ils restent provisoires jusqu'aux 12 annonces et aux cinq places. Le barème est de 10 points par candidate du Top 12 trouvée, plus 100 points pour le rang exact de Miss France et 50 pour chaque rang exact des quatre dauphines (420 maximum). Les pronostics restent privés avant le direct; pendant la cérémonie, un RPC n'expose aux seuls membres d'une même ligue que le rang prédit de la candidate qui vient d'être annoncée. Les ligues affichent le classement provisoire, les réactions 👏🔥👑 et un historique des annonces. Une annulation n'est possible que pour la dernière annonce candidate; l'action est auditée et déclenche le recalcul. Les résultats officiels manuels se limitent aux cinq places du Top 5. Le classement global n'expose que les pseudos et scores agrégés.
 
-La page publique `/resultats` affiche le Top 12 officiel uniquement après publication des résultats et héberge le fil des annonces de cérémonie. Les admins peuvent saisir des annonces vérifiées sous forme de brouillon et les publier lorsque l'édition est en direct ou terminée. Le fil s'actualise via Supabase Realtime avec un repli par actualisation périodique; aucune annonce ni aucun résultat n'est généré automatiquement. Le back-office permet aussi de modifier l'échéance de clôture et la date de cérémonie en heure de Paris, et de faire évoluer la phase de l'édition. Les fonctions SQL refusent les transitions incohérentes, notamment ouvrir sans échéance future ou passer en direct avant la clôture.
+La page `/resultats` affiche séparément les demi-finalistes dans leur ordre d'annonce et le Top 5 officiel, ainsi que le fil d'événements. Le fil et les réactions se mettent à jour via Supabase Realtime avec un repli périodique. Les annonces sont saisies par une personne de confiance dans la console; elles ne sont pas récupérées automatiquement depuis une source externe. Les phases de Miss France 2027 basculent automatiquement via Supabase Cron, chaque minute : ouverture jusqu'au 11 décembre 2026 à 23 h 59 heure de Paris, fermeture à minuit, direct le 12 décembre à 21 h 10, puis terminée le 13 décembre à 02 h. Le serveur SQL reste l'autorité qui bloque toute modification dès l'échéance, même si une interface n'a pas encore actualisé son affichage.
 
 La gestion des candidates se trouve sous `/admin/candidates`. Les admins peuvent créer, modifier et supprimer les fiches de l'édition courante, dont le profil, les sources et les photos. Les portraits sont téléversés dans le bucket public `candidate-photos`; les politiques Storage autorisent la lecture publique mais réservent téléversement, remplacement et suppression aux admins. Les suppressions restent soumises aux clés étrangères des résultats et pronostics existants.
 

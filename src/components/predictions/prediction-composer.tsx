@@ -9,6 +9,7 @@ import { isCompletePrediction, readLocalPrediction } from "@/features/prediction
 import { saveFavoriteCandidate, savePrediction } from "@/features/predictions/actions";
 import type { PredictionPageData } from "@/features/predictions/repository";
 import { PredictionShare } from "@/components/predictions/prediction-share";
+import { PhaseRefresh } from "@/components/editions/phase-refresh";
 
 const places = [
   "Miss France",
@@ -50,7 +51,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
   const [savingFavorite, setSavingFavorite] = useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState("");
   const [favoriteError, setFavoriteError] = useState(false);
-  const canModify = prediction.canSaveDraft && status !== "submitted" && !saving;
+  const canModify = prediction.canSaveDraft && !saving;
 
   const regions = useMemo(
     () => [...new Set(candidates.map(({ region: candidateRegion }) => candidateRegion))].sort((a, b) => a.localeCompare(b, "fr")),
@@ -61,7 +62,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
     .map((id) => candidates.find((candidate) => candidate.id === id))
     .filter((candidate): candidate is Candidate => Boolean(candidate));
   const favoriteCandidate = candidates.find((candidate) => candidate.slug === favoriteSlug) ?? null;
-  const canEditFavorite = prediction.canSaveDraft && status !== "submitted" && !savingFavorite;
+  const canEditFavorite = prediction.canSaveDraft && !savingFavorite;
 
   const availableCandidates = useMemo(() => {
     const search = normalize(query.trim());
@@ -121,6 +122,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
 
   async function save(statusToSave: "draft" | "submitted" = "draft") {
     if (saving || !prediction.canSaveDraft || (statusToSave === "submitted" && !prediction.canSubmit)) return;
+    const wasSubmitted = status === "submitted";
     setSaving(true);
     setActionMessage("");
     setActionError(false);
@@ -137,7 +139,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
     setSavedAt(result.savedAt);
     setStatus(result.status);
     setDirty(false);
-    setActionMessage(result.status === "submitted" ? "Ton pronostic est confirmé et reste privé jusqu’à la clôture." : "Brouillon enregistré sur ton compte.");
+    setActionMessage(result.status === "submitted" ? wasSubmitted ? "Tes modifications sont enregistrées. Ton pronostic reste confirmé et privé jusqu’à la clôture." : "Ton pronostic est confirmé et reste privé jusqu’à la clôture." : "Brouillon enregistré sur ton compte.");
     if (result.status === "submitted") setReviewing(false);
   }
 
@@ -170,6 +172,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
 
   return (
     <main className="section-wrap pb-16 sm:pb-24">
+      <PhaseRefresh />
       <header className="relative overflow-hidden rounded-3xl border border-gold/20 bg-[radial-gradient(ellipse_at_80%_20%,rgba(200,164,93,0.16),transparent_42%),linear-gradient(120deg,#1a1711,#11100e)] px-6 py-9 sm:px-10 sm:py-12">
         <div aria-hidden="true" className="absolute -right-16 -top-16 h-64 w-64 rounded-full border border-gold/10" />
         <p className="section-eyebrow inline-flex items-center gap-2"><Crown size={14} /> Édition 2027</p>
@@ -185,13 +188,12 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
         <LockKeyhole size={16} className="mt-0.5 shrink-0 text-gold" />
         <p>
           {prediction.editionStatus === "upcoming"
-            ? "Ton brouillon peut être enregistré sur ton compte dès maintenant. Il reste privé; la confirmation finale sera ouverte avec la période officielle des pronostics."
+            ? "Ton brouillon peut être enregistré dès maintenant. Tu pourras modifier et confirmer ton pronostic jusqu’au 11 décembre 2026 à 23 h 59, heure de Paris."
             : prediction.editionStatus === "open"
-              ? "Ton brouillon reste privé et n’est visible que par toi jusqu’à la clôture officielle des pronostics."
+              ? "Ton pronostic et ton coup de cœur restent privés. Tu peux les modifier jusqu’au 11 décembre 2026 à 23 h 59, heure de Paris; ils seront verrouillés automatiquement ensuite."
               : prediction.editionStatus === "closed"
-                ? "La période de pronostics est fermée. Tu peux consulter ton classement, mais les modifications ne sont plus possibles."
+                ? "Les pronostics sont fermés automatiquement depuis le 12 décembre à minuit. Tu peux consulter ton classement, mais les modifications ne sont plus possibles."
                 : "Les données du pronostic ne sont pas disponibles. Vérifie que les migrations Supabase sont appliquées."}
-          {prediction.deadline && prediction.editionStatus !== "closed" && <> Clôture le {new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }).format(new Date(prediction.deadline))}.</>}
         </p>
       </div>
 
@@ -299,7 +301,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
               </div>
             ) : status === "submitted" ? (
               <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] p-4">
-                <div className="flex items-start gap-3"><Check className="mt-0.5 shrink-0 text-emerald-300" size={18} /><div><p className="text-sm font-medium text-emerald-100">Pronostic confirmé</p><p className="mt-1 text-xs leading-5 text-white/45">Il est enregistré sur ton compte et restera privé jusqu’à la clôture officielle.</p></div></div>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><Check className="mt-0.5 shrink-0 text-emerald-300" size={18} /><div><p className="text-sm font-medium text-emerald-100">Pronostic confirmé</p><p className="mt-1 text-xs leading-5 text-white/45">{prediction.canSaveDraft ? "Il reste privé et tu peux encore modifier le classement jusqu’au 11 décembre à 23 h 59." : "Il reste privé jusqu’à la clôture. Les modifications sont maintenant verrouillées."}</p></div></div><button type="button" onClick={() => void save("submitted")} disabled={!canModify || !dirty || saving} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gold px-4 text-sm font-semibold text-[#17130c] disabled:cursor-not-allowed disabled:opacity-40"><Check size={15} />{saving ? "Enregistrement…" : "Enregistrer les modifications"}</button></div>
               </div>
             ) : (
               <div className="flex flex-col gap-2 sm:flex-row">

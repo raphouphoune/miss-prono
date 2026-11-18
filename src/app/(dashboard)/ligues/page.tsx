@@ -1,6 +1,9 @@
-import { ArrowRight, Crown, KeyRound, Plus, Trophy, Users } from "lucide-react";
+import { ArrowRight, Crown, KeyRound, Plus, Radio, Trophy, Users } from "lucide-react";
 import { InviteCodeField } from "@/components/leagues/invite-code-field";
+import { LiveUpdates } from "@/components/results/live-updates";
+import { PhaseRefresh } from "@/components/editions/phase-refresh";
 import { createLeague, joinLeague } from "@/features/leagues/actions";
+import { toggleLeagueEventReaction } from "@/features/ceremony/actions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const fieldClass = "mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-ivory outline-none transition placeholder:text-muted/70 focus:border-gold/60 focus:ring-2 focus:ring-gold/15";
@@ -16,6 +19,8 @@ const feedback: Record<string, string> = {
 };
 
 type MemberRow = { league_id: string; user_id: string; joined_at: string };
+type Standing = { user_id: string; username: string; joined_at: string; has_prediction: boolean; total_points: number | null; exact_positions: number | null; top12_hits: number | null; is_provisional: boolean | null; player_rank: number | null };
+type LivePick = { event_id: string; candidate_id: string; candidate_name: string; candidate_region: string; announced_at: string; username: string; has_prediction: boolean; predicted_rank: number | null };
 
 function isFutureDeadline(deadline: string | null | undefined) {
   return !deadline || Date.parse(deadline) > Date.now();
@@ -65,28 +70,21 @@ export default async function LeaguesPage({ searchParams }: { searchParams: Prom
     : { data: [] as { id: string; username: string }[] };
   const usernameById = new Map((profiles ?? []).map((profile) => [profile.id, profile.username]));
 
-  const predictionByUser = new Map<string, string>();
-  const scoreByPrediction = new Map<string, { points: number; exact: number }>();
-  if (edition && (edition.status === "live" || edition.status === "completed") && memberIds.length) {
-    const { data: predictions } = await supabase
-      .from("predictions")
-      .select("id,user_id")
-      .eq("edition_id", edition.id)
-      .eq("status", "submitted")
-      .in("user_id", memberIds);
-    for (const prediction of predictions ?? []) predictionByUser.set(prediction.user_id, prediction.id);
-
-    const predictionIds = [...predictionByUser.values()];
-    if (predictionIds.length) {
-      const { data: scores } = await supabase
-        .from("scores")
-        .select("prediction_id,total_points,exact_positions")
-        .in("prediction_id", predictionIds);
-      for (const score of scores ?? []) {
-        scoreByPrediction.set(score.prediction_id, { points: score.total_points, exact: score.exact_positions });
-      }
-    }
-  }
+  const livePhase = Boolean(edition && (edition.status === "live" || edition.status === "completed"));
+  const relayData = livePhase ? await Promise.all((leagues ?? []).map(async (league) => {
+    const [{ data: standings }, { data: picks }] = await Promise.all([
+      supabase.rpc("get_league_standings", { target_league_id: league.id }),
+      supabase.rpc("get_league_live_picks", { target_league_id: league.id }),
+    ]);
+    return [league.id, { standings: (standings ?? []) as Standing[], picks: (picks ?? []) as LivePick[] }] as const;
+  })) : [];
+  const relayByLeague = new Map(relayData);
+  const { data: ceremonyEvents } = livePhase && edition
+    ? await supabase.from("ceremony_events").select("id,stage,title,body,published_at,candidate_id").eq("edition_id", edition.id).eq("status", "published").not("candidate_id", "is", null).order("published_at", { ascending: true })
+    : { data: [] as { id: string; stage: string; title: string; body: string | null; published_at: string; candidate_id: string | null }[] };
+  const { data: reactionRows } = livePhase && leagueIds.length
+    ? await supabase.from("league_event_reactions").select("league_id,event_id,user_id,reaction").in("league_id", leagueIds)
+    : { data: [] as { league_id: string; event_id: string; user_id: string; reaction: string }[] };
 
   const membersByLeague = new Map<string, MemberRow[]>();
   for (const member of rows) {
@@ -97,6 +95,7 @@ export default async function LeaguesPage({ searchParams }: { searchParams: Prom
 
   return (
     <main className="section-wrap min-h-[70vh]">
+      <PhaseRefresh />
       <header className="mb-10 flex flex-col justify-between gap-5 border-b border-white/10 pb-8 md:flex-row md:items-end">
         <div>
           <p className="section-eyebrow">Jouez ensemble</p>
@@ -109,6 +108,7 @@ export default async function LeaguesPage({ searchParams }: { searchParams: Prom
           <Crown size={16} className="text-gold" /> Miss France 2027
         </div>
       </header>
+      {edition && livePhase && <div className="mb-6 flex justify-center"><LiveUpdates editionId={edition.id} isLive={edition.status === "live"} /></div>}
 
       {status && feedback[status] && (
         <p role="status" className={`mb-7 rounded-xl border px-4 py-3 text-sm ${status === "created" || status === "joined" ? "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-100" : "border-red-400/20 bg-red-400/[0.06] text-red-100"}`}>
@@ -169,13 +169,11 @@ export default async function LeaguesPage({ searchParams }: { searchParams: Prom
           <div className="grid gap-5 xl:grid-cols-2">
             {leagues.map((league) => {
               const members = membersByLeague.get(league.id) ?? [];
-              const rankedMembers = [...members].sort((first, second) => {
-                const firstPrediction = predictionByUser.get(first.user_id);
-                const secondPrediction = predictionByUser.get(second.user_id);
-                const firstScore = firstPrediction ? scoreByPrediction.get(firstPrediction) : undefined;
-                const secondScore = secondPrediction ? scoreByPrediction.get(secondPrediction) : undefined;
-                return (secondScore?.points ?? -1) - (firstScore?.points ?? -1) || first.joined_at.localeCompare(second.joined_at);
-              });
+              const relay = relayByLeague.get(league.id);
+              const rankedMembers = relay?.standings ?? members.map((member) => ({ user_id: member.user_id, username: usernameById.get(member.user_id) ?? "Membre", joined_at: member.joined_at, has_prediction: false, total_points: null, exact_positions: null, top12_hits: null, is_provisional: null, player_rank: null }));
+              const picks = relay?.picks ?? [];
+              const announcedEvents = (ceremonyEvents ?? []).filter((event) => picks.some((pick) => pick.event_id === event.id));
+              const reactions = reactionRows?.filter((row) => row.league_id === league.id) ?? [];
               return (
                 <article key={league.id} className="overflow-hidden rounded-2xl border border-white/10 bg-surface/60">
                   <div className="flex flex-col justify-between gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:p-6">
@@ -189,24 +187,24 @@ export default async function LeaguesPage({ searchParams }: { searchParams: Prom
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[420px] text-left text-sm">
                       <thead className="text-xs uppercase tracking-[0.12em] text-muted">
-                        <tr className="border-b border-white/[0.07]"><th className="px-5 py-3 font-medium sm:px-6">Membre</th><th className="px-4 py-3 text-right font-medium">Points</th><th className="px-5 py-3 text-right font-medium sm:px-6">Exactitude</th></tr>
+                        <tr className="border-b border-white/[0.07]"><th className="px-5 py-3 font-medium sm:px-6">Membre</th><th className="px-4 py-3 text-right font-medium">Points</th><th className="px-5 py-3 text-right font-medium sm:px-6">Top 12 · places exactes</th></tr>
                       </thead>
                       <tbody>
-                        {rankedMembers.map((member, index) => {
-                          const predictionId = predictionByUser.get(member.user_id);
-                          const score = predictionId ? scoreByPrediction.get(predictionId) : undefined;
+                        {rankedMembers.map((member) => {
                           return (
                             <tr key={member.user_id} className="border-b border-white/[0.05] last:border-0">
-                              <td className="px-5 py-3.5 text-ivory sm:px-6"><span className="mr-3 font-mono text-xs text-muted">{String(index + 1).padStart(2, "0")}</span>{usernameById.get(member.user_id) ?? "Membre"}{member.user_id === league.owner_id && <span className="ml-2 text-[10px] uppercase tracking-wider text-gold">Créateur</span>}</td>
-                              <td className="px-4 py-3.5 text-right font-semibold text-champagne">{score ? score.points : "—"}</td>
-                              <td className="px-5 py-3.5 text-right text-muted sm:px-6">{score ? `${score.exact} / 12` : "—"}</td>
+                              <td className="px-5 py-3.5 text-ivory sm:px-6"><span className="mr-3 font-mono text-xs text-muted">{member.player_rank ? String(member.player_rank).padStart(2, "0") : "—"}</span>{member.username}{member.user_id === league.owner_id && <span className="ml-2 text-[10px] uppercase tracking-wider text-gold">Créateur</span>}</td>
+                              <td className="px-4 py-3.5 text-right font-semibold text-champagne">{member.has_prediction ? member.total_points ?? 0 : "—"}</td>
+                              <td className="px-5 py-3.5 text-right text-muted sm:px-6">{member.has_prediction ? `${member.top12_hits ?? 0} Top 12 · ${member.exact_positions ?? 0}/5 exact` : "—"}</td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
-                  <p className="flex items-center gap-2 px-5 py-3 text-xs text-muted sm:px-6"><Trophy size={14} className="text-gold/75" /> Les points seront calculés après publication des résultats officiels.</p>
+                  {livePhase ? <div className="border-t border-white/[0.07] p-5 sm:px-6"><p className="flex items-center gap-2 text-xs text-muted"><Trophy size={14} className="text-gold/75" />{rankedMembers.some((member) => member.is_provisional) ? "Classement provisoire, actualisé à chaque annonce." : "Classement final."}</p>
+                    {announcedEvents.length > 0 && <div className="mt-5"><h4 className="flex items-center gap-2 text-sm font-semibold text-champagne"><Radio size={15} className="text-gold" />Choix révélés dans la ligue</h4><ol className="mt-3 space-y-3">{announcedEvents.map((event) => { const eventPicks = picks.filter((pick) => pick.event_id === event.id); const myReaction = reactions.find((reaction) => reaction.event_id === event.id && reaction.user_id === userId)?.reaction; return <li key={event.id} className="rounded-xl border border-white/[0.07] bg-black/20 p-4"><p className="font-medium text-ivory">{eventPicks[0]?.candidate_name} <span className="font-normal text-muted">· Miss {eventPicks[0]?.candidate_region}</span></p><div className="mt-2 flex flex-wrap gap-2">{eventPicks.map((pick) => <span key={pick.username} className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-muted">{pick.username}: {pick.has_prediction ? pick.predicted_rank ? `#${pick.predicted_rank}` : "pas choisie dans son Top 12" : "pas de pronostic soumis"}</span>)}</div><div className="mt-3 flex flex-wrap gap-2">{(["👏", "🔥", "👑"] as const).map((emoji) => { const total = reactions.filter((reaction) => reaction.event_id === event.id && reaction.reaction === emoji).length; return <form key={emoji} action={toggleLeagueEventReaction}><input type="hidden" name="league_id" value={league.id} /><input type="hidden" name="event_id" value={event.id} /><input type="hidden" name="reaction" value={emoji} /><button aria-label={`${emoji} ${total}`} className={`rounded-full border px-3 py-1 text-xs ${myReaction === emoji ? "border-gold/50 bg-gold/10 text-champagne" : "border-white/10 text-muted"}`}>{emoji} {total || ""}</button></form>; })}</div></li>; })}</ol></div>}
+                  </div> : <p className="flex items-center gap-2 px-5 py-3 text-xs text-muted sm:px-6"><Trophy size={14} className="text-gold/75" />Les pronostics restent privés jusqu’au direct.</p>}
                 </article>
               );
             })}

@@ -21,6 +21,11 @@ export function LiveUpdates({ editionId, isLive }: { editionId: string; isLive: 
         { event: "*", schema: "public", table: "ceremony_events", filter: `edition_id=eq.${editionId}` },
         () => router.refresh(),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "league_event_reactions" },
+        () => router.refresh(),
+      )
       .subscribe((status) => {
         setConnected(status === "SUBSCRIBED");
       });
