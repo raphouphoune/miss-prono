@@ -123,7 +123,7 @@ Cette confidentialité doit être garantie au niveau de Supabase et PostgreSQL, 
 
 La date et l'heure de clôture doivent être configurables par édition.
 
-Le coup de cœur est privé et modifiable pendant la période de préparation et jusqu'à la clôture, selon les mêmes règles que le brouillon. Après publication des résultats, l'utilisateur connecté peut voir si sa favorite a remporté l'élection. Le partage génère une image localement; aucune page publique ni aucun endpoint ne révèle le pronostic. L'interface avertit avant de générer le Top 12 que le destinataire verra les choix si l'utilisateur le partage.
+Le coup de cœur est privé et modifiable pendant la période de préparation et jusqu'à la clôture, selon les mêmes règles que le brouillon. Après publication des résultats, l'utilisateur connecté peut voir si sa favorite a remporté l'élection. Le partage génère localement une carte du coup de cœur avec le portrait de la candidate; aucune page publique ni aucun endpoint ne révèle le pronostic. L'interface avertit avant de générer le Top 12 que le destinataire verra les choix si l'utilisateur le partage.
 
 ## Ligues privées
 

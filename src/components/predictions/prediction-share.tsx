@@ -11,7 +11,54 @@ function roundedRect(context: CanvasRenderingContext2D, x: number, y: number, wi
   context.roundRect(x, y, width, height, radius);
 }
 
-function drawShareCard(kind: ShareKind, candidates: Candidate[]) {
+function loadCandidatePhoto(candidate: Candidate) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("La photo de la candidate ne peut pas être chargée."));
+    image.src = candidate.imageSrc;
+  });
+}
+
+function drawCandidatePhoto(context: CanvasRenderingContext2D, image: HTMLImageElement) {
+  const x = 330;
+  const y = 365;
+  const width = 420;
+  const height = 560;
+  const targetRatio = width / height;
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  let sourceX = 0;
+  const sourceY = 0;
+  let sourceWidth = image.naturalWidth;
+  let sourceHeight = image.naturalHeight;
+
+  if (imageRatio > targetRatio) {
+    sourceWidth = sourceHeight * targetRatio;
+    sourceX = (image.naturalWidth - sourceWidth) / 2;
+  } else {
+    sourceHeight = sourceWidth / targetRatio;
+  }
+
+  context.save();
+  roundedRect(context, x, y, width, height, 26);
+  context.clip();
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+  const shade = context.createLinearGradient(0, y + height * 0.68, 0, y + height);
+  shade.addColorStop(0, "rgba(16, 15, 13, 0)");
+  shade.addColorStop(1, "rgba(16, 15, 13, .42)");
+  context.fillStyle = shade;
+  context.fillRect(x, y, width, height);
+  context.restore();
+
+  context.strokeStyle = "rgba(213, 176, 102, .72)";
+  context.lineWidth = 3;
+  roundedRect(context, x, y, width, height, 26);
+  context.stroke();
+}
+
+async function drawShareCard(kind: ShareKind, candidates: Candidate[]) {
+  const favoritePhoto = kind === "favorite" ? await loadCandidatePhoto(candidates[0]) : null;
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1350;
@@ -57,18 +104,19 @@ function drawShareCard(kind: ShareKind, candidates: Candidate[]) {
 
   if (kind === "favorite") {
     const candidate = candidates[0];
+    if (favoritePhoto) drawCandidatePhoto(context, favoritePhoto);
     context.fillStyle = "#d6b46d";
-    context.font = "48px Georgia, serif";
-    context.fillText("♛", 540, 555);
+    context.font = "36px Georgia, serif";
+    context.fillText("♛", 540, 1000);
     context.fillStyle = "#f2e2bd";
-    context.font = candidate.name.length > 22 ? "500 44px Georgia, serif" : "500 54px Georgia, serif";
-    context.fillText(candidate.name, 540, 690, 850);
+    context.font = candidate.name.length > 22 ? "500 42px Georgia, serif" : "500 52px Georgia, serif";
+    context.fillText(candidate.name, 540, 1070, 850);
     context.fillStyle = "rgba(245, 239, 225, .66)";
     context.font = "30px Arial, sans-serif";
-    context.fillText(`Miss ${candidate.region}`, 540, 750, 850);
+    context.fillText(`Miss ${candidate.region}`, 540, 1120, 850);
     context.fillStyle = "rgba(245, 239, 225, .42)";
     context.font = "22px Arial, sans-serif";
-    context.fillText("Ma candidate favorite", 540, 1120);
+    context.fillText("MA CANDIDATE FAVORITE", 540, 1230);
   } else {
     context.textAlign = "left";
     candidates.forEach((candidate, index) => {
@@ -98,7 +146,7 @@ function drawShareCard(kind: ShareKind, candidates: Candidate[]) {
   context.textAlign = "center";
   context.fillStyle = "rgba(245, 239, 225, .35)";
   context.font = "20px Arial, sans-serif";
-  context.fillText("missfrance-prono.vercel.app", 540, 1250);
+  context.fillText("MISS PRONO · MISS FRANCE 2027", 540, 1250);
   return canvas;
 }
 
@@ -119,7 +167,8 @@ export function PredictionShare({ favorite, ranking, beforeDeadline }: { favorit
     setBusy(true);
     setMessage("");
     try {
-      const blob = await canvasBlob(drawShareCard(kind, candidates));
+      const canvas = await drawShareCard(kind, candidates);
+      const blob = await canvasBlob(canvas);
       const filename = kind === "favorite" ? "miss-prono-coup-de-coeur.png" : "miss-prono-top-12.png";
       const file = new File([blob], filename, { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -137,6 +186,8 @@ export function PredictionShare({ favorite, ranking, beforeDeadline }: { favorit
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         setMessage("Partage annulé.");
+      } else if (error instanceof Error && error.message.includes("photo")) {
+        setMessage("La photo ne peut pas être chargée pour le moment. Réessaie avec une connexion active.");
       } else {
         setMessage("La carte n’a pas pu être créée sur cet appareil.");
       }
