@@ -43,16 +43,32 @@ export async function savePrediction(formData: FormData): Promise<SavePrediction
         details: error.details,
         hint: error.hint,
       });
-      if (error.message.includes("not open") || error.message.includes("not available")) {
+      const errorMessage = error.message.toLowerCase();
+      if (errorMessage.includes("not open") || errorMessage.includes("not available")) {
         return { ok: false, message: "Cette édition n’accepte pas de modification en ce moment." };
       }
-      if (error.message.includes("already been submitted")) {
+      if (errorMessage.includes("already been submitted")) {
         return { ok: false, message: "Ce pronostic a déjà été confirmé et ne peut plus être modifié ici." };
       }
-      if (error.message.includes("do not belong") || error.message.includes("more than once")) {
+      if (errorMessage.includes("must remain submitted")) {
+        return { ok: false, message: "Ton pronostic est déjà confirmé. Pour le modifier, confirme à nouveau les 12 candidates." };
+      }
+      if (errorMessage.includes("do not belong") || errorMessage.includes("more than once")) {
         return { ok: false, message: "La sélection contient une candidate invalide ou en double." };
       }
-      return { ok: false, message: "Le pronostic n’a pas pu être enregistré. Vérifie que les migrations Supabase sont appliquées." };
+      if (error.code === "42501") {
+        return { ok: false, message: "La base de données a refusé l’enregistrement. Les droits Supabase ou les migrations de pronostics doivent être vérifiés." };
+      }
+      if (error.code === "PGRST202" || error.code === "42883") {
+        return { ok: false, message: "La fonction d’enregistrement manque dans Supabase. Applique les migrations du projet puis réessaie." };
+      }
+      if (error.code === "23514") {
+        return { ok: false, message: "Pour confirmer ton pronostic, sélectionne exactement 12 candidates différentes." };
+      }
+      if (error.code === "55000") {
+        return { ok: false, message: "La base Supabase n’autorise pas encore cette modification. Vérifie que la dernière migration des pronostics est appliquée." };
+      }
+      return { ok: false, message: "Le pronostic n’a pas pu être enregistré. Réessaie dans quelques instants. Si le problème continue, consulte les journaux du serveur." };
     }
 
     return { ok: true, status: submit ? "submitted" : "draft", savedAt: new Date().toISOString() };
