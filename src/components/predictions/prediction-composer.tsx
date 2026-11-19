@@ -28,11 +28,12 @@ function placeTitle(index: number) {
 }
 
 type PredictionComposerProps = {
+  editionSlug: string;
   candidates: Candidate[];
   prediction: PredictionPageData;
 };
 
-export function PredictionComposer({ candidates, prediction }: PredictionComposerProps) {
+export function PredictionComposer({ editionSlug, candidates, prediction }: PredictionComposerProps) {
   const validInitialIds = prediction.candidateSlugs.filter((slug) => candidates.some((candidate) => candidate.id === slug));
   const [selectedIds, setSelectedIds] = useState<string[]>(validInitialIds);
   const [query, setQuery] = useState("");
@@ -127,6 +128,7 @@ export function PredictionComposer({ candidates, prediction }: PredictionCompose
     setActionMessage("");
     setActionError(false);
     const formData = new FormData();
+    formData.set("edition_slug", editionSlug);
     formData.set("candidate_slugs", JSON.stringify(selectedIds));
     formData.set("submit", String(statusToSave === "submitted"));
     const result = await savePrediction(formData);

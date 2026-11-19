@@ -7,6 +7,11 @@ type SavePredictionResult =
   | { ok: false; message: string };
 
 export async function savePrediction(formData: FormData): Promise<SavePredictionResult> {
+  const editionSlug = formData.get("edition_slug");
+  if (typeof editionSlug !== "string" || editionSlug.trim() === "") {
+    return { ok: false, message: "L’édition du pronostic est manquante. Recharge la page puis réessaie." };
+  }
+
   const rawSlugs = formData.get("candidate_slugs");
   let candidateSlugs: unknown;
   try {
@@ -30,7 +35,7 @@ export async function savePrediction(formData: FormData): Promise<SavePrediction
 
   try {
     const { error } = await supabase.rpc("save_my_prediction", {
-      target_edition_slug: "miss-france-2027",
+      target_edition_slug: editionSlug.trim(),
       candidate_slugs: candidateSlugs,
       submit_prediction: submit,
     });
