@@ -6,11 +6,14 @@ type SavePredictionResult =
   | { ok: true; status: "draft" | "submitted"; savedAt: string }
   | { ok: false; message: string };
 
+const DEFAULT_EDITION_SLUG = "miss-france-2027";
+
 export async function savePrediction(formData: FormData): Promise<SavePredictionResult> {
-  const editionSlug = formData.get("edition_slug");
-  if (typeof editionSlug !== "string" || editionSlug.trim() === "") {
-    return { ok: false, message: "L’édition du pronostic est manquante. Recharge la page puis réessaie." };
-  }
+  const rawEditionSlug = formData.get("edition_slug") ?? formData.get("_1_edition_slug");
+  const normalizedSlug =
+    typeof rawEditionSlug === "string" && rawEditionSlug.trim() !== ""
+      ? rawEditionSlug.trim()
+      : DEFAULT_EDITION_SLUG;
 
   const rawSlugs = formData.get("candidate_slugs");
   let candidateSlugs: unknown;
@@ -35,7 +38,7 @@ export async function savePrediction(formData: FormData): Promise<SavePrediction
 
   try {
     const { error } = await supabase.rpc("save_my_prediction", {
-      target_edition_slug: editionSlug.trim(),
+      target_edition_slug: normalizedSlug,
       candidate_slugs: candidateSlugs,
       submit_prediction: submit,
     });
@@ -47,8 +50,12 @@ export async function savePrediction(formData: FormData): Promise<SavePrediction
         message: error.message,
         details: error.details,
         hint: error.hint,
+        target_edition_slug: normalizedSlug,
       });
       const errorMessage = error.message.toLowerCase();
+      if (error.code === "P0002" || errorMessage.includes("edition not found")) {
+        return { ok: false, message: "Édition introuvable pour ce pronostic. Recharge la page puis réessaie." };
+      }
       if (errorMessage.includes("not open") || errorMessage.includes("not available")) {
         return { ok: false, message: "Cette édition n’accepte pas de modification en ce moment." };
       }
@@ -93,7 +100,7 @@ export async function saveFavoriteCandidate(candidateSlug: string | null): Promi
   if (!authData?.claims.sub) return { ok: false, message: "Ta session a expiré. Reconnecte-toi pour continuer." };
 
   const { error } = await supabase.rpc("set_my_prediction_favorite", {
-    target_edition_slug: "miss-france-2027",
+    target_edition_slug: DEFAULT_EDITION_SLUG,
     favorite_candidate_slug: candidateSlug,
   });
 
@@ -104,6 +111,9 @@ export async function saveFavoriteCandidate(candidateSlug: string | null): Promi
       details: error.details,
       hint: error.hint,
     });
+    if (error.code === "P0002" || error.message.toLowerCase().includes("edition not found")) {
+      return { ok: false, message: "Édition introuvable pour enregistrer le coup de cœur." };
+    }
     if (error.message.includes("not available") || error.message.includes("not open")) {
       return { ok: false, message: "Le coup de cœur ne peut plus être modifié pour cette édition." };
     }
