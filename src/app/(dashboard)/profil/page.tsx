@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowRight, Radio, ShieldCheck } from "lucide-react";
 import { updateProfile } from "@/features/auth/actions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -10,10 +12,15 @@ export default async function ProfilePage({ searchParams }: PageProps) {
   const userId = authData?.claims.sub;
   if (!userId) redirect("/connexion");
 
-  const [profileResult, privateProfileResult] = await Promise.all([
+  const [profileResult, privateProfileResult, adminResult, editionResult] = await Promise.all([
     supabase.from("profiles").select("username").eq("id", userId).maybeSingle(),
     supabase.from("private_profiles").select("first_name,last_name").eq("id", userId).maybeSingle(),
+    supabase.rpc("is_app_admin"),
+    supabase.from("editions").select("id").eq("slug", "miss-france-2027").maybeSingle(),
   ]);
+  const { data: isAnnouncer } = editionResult.data
+    ? await supabase.rpc("is_ceremony_announcer", { target_edition_id: editionResult.data.id })
+    : { data: false };
 
   const notice = status === "saved"
     ? { style: "border-gold/25 bg-gold/[0.07] text-champagne", text: "Ton profil a été mis à jour." }
@@ -33,6 +40,11 @@ export default async function ProfilePage({ searchParams }: PageProps) {
         <p className="section-eyebrow">Mon compte</p>
         <h1 className="mt-3 font-display text-4xl text-champagne sm:text-5xl">Mon profil</h1>
         <p className="mt-3 text-sm leading-6 text-white/55">Ton pseudo est visible par les autres joueurs. Ton prénom et ton nom restent privés.</p>
+
+        {(adminResult.data || isAnnouncer) && <nav aria-label="Espaces réservés" className="mt-6 grid gap-3 sm:grid-cols-2">
+          {adminResult.data && <Link href="/admin" className="inline-flex min-h-12 items-center justify-between gap-3 rounded-xl border border-gold/20 bg-gold/[0.05] px-4 text-sm font-medium text-champagne transition hover:bg-gold/10"><span className="inline-flex items-center gap-2"><ShieldCheck size={17} /> Administration</span><ArrowRight size={16} /> </Link>}
+          {isAnnouncer && <Link href="/annonceur" className="inline-flex min-h-12 items-center justify-between gap-3 rounded-xl border border-gold/20 bg-gold/[0.05] px-4 text-sm font-medium text-champagne transition hover:bg-gold/10"><span className="inline-flex items-center gap-2"><Radio size={17} /> Console annonceur</span><ArrowRight size={16} /> </Link>}
+        </nav>}
 
         {notice && <p role="status" className={`mt-6 rounded-xl border px-4 py-3 text-sm leading-6 ${notice.style}`}>{notice.text}</p>}
 

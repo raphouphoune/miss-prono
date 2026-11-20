@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Calculator, CheckCircle2, Clock3, ListOrdered, Radio, ShieldCheck, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, CheckCircle2, Clock3, ListOrdered, Radio, ShieldCheck, Users } from "lucide-react";
 import { saveCeremonyEvent, saveOfficialResults, saveScoringRules } from "@/features/admin/actions";
 import { calculateScores } from "@/features/scoring/actions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -93,6 +93,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   return (
     <main className="section-wrap min-h-[70vh]">
       <PhaseRefresh />
+      <Link href="/profil" className="mb-5 inline-flex items-center gap-2 text-sm text-muted transition hover:text-champagne"><ArrowLeft size={16} /> Retour au profil</Link>
       <header className="mb-10 border-b border-white/10 pb-8">
         <p className="section-eyebrow">Espace sécurisé</p>
         <h1 className="section-title">Administration</h1>

@@ -9,6 +9,7 @@ export type PredictionPageData = {
   savedAt: string | null;
   canSaveDraft: boolean;
   canSubmit: boolean;
+  scoringRules: { rank: number; points: number }[];
 };
 
 type CandidateRelation = { slug: string } | { slug: string }[] | null;
@@ -25,6 +26,7 @@ export async function getPredictionPageData2027(): Promise<PredictionPageData> {
     savedAt: null,
     canSaveDraft: false,
     canSubmit: false,
+    scoringRules: [],
   };
 
   const supabase = await createServerSupabaseClient();
@@ -39,6 +41,13 @@ export async function getPredictionPageData2027(): Promise<PredictionPageData> {
     .maybeSingle();
 
   if (editionError || !edition) return unavailable;
+
+  const { data: scoringRules } = await supabase
+    .from("scoring_rules")
+    .select("rank,points")
+    .eq("edition_id", edition.id)
+    .order("rank", { ascending: true });
+  const rules = (scoringRules ?? []).map((rule) => ({ rank: rule.rank, points: rule.points }));
 
   const deadline = edition.predictions_deadline as string | null;
   const hasTime = deadline === null || new Date(deadline).getTime() > Date.now();
@@ -56,8 +65,8 @@ export async function getPredictionPageData2027(): Promise<PredictionPageData> {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (predictionError) return { ...unavailable, editionStatus };
-  if (!prediction) return { editionStatus, deadline, candidateSlugs: [], favoriteSlug: null, status: "draft", savedAt: null, canSaveDraft, canSubmit };
+  if (predictionError) return { ...unavailable, editionStatus, scoringRules: rules };
+  if (!prediction) return { editionStatus, deadline, candidateSlugs: [], favoriteSlug: null, status: "draft", savedAt: null, canSaveDraft, canSubmit, scoringRules: rules };
 
   const favoriteRelation = (prediction as { favorite_candidate?: FavoriteRow }).favorite_candidate;
   const favoriteCandidate = Array.isArray(favoriteRelation) ? favoriteRelation[0] : favoriteRelation;
@@ -68,7 +77,7 @@ export async function getPredictionPageData2027(): Promise<PredictionPageData> {
     .eq("prediction_id", prediction.id)
     .order("rank", { ascending: true });
 
-  if (choicesError) return { ...unavailable, editionStatus };
+  if (choicesError) return { ...unavailable, editionStatus, scoringRules: rules };
   const candidateSlugs = ((choices ?? []) as ChoiceRow[])
     .sort((a, b) => a.rank - b.rank)
     .flatMap(({ candidate }) => {
@@ -85,5 +94,6 @@ export async function getPredictionPageData2027(): Promise<PredictionPageData> {
     savedAt: prediction.updated_at as string,
     canSaveDraft,
     canSubmit,
+    scoringRules: rules,
   };
 }

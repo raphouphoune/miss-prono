@@ -10,6 +10,7 @@ import { saveFavoriteCandidate, savePrediction } from "@/features/predictions/ac
 import type { PredictionPageData } from "@/features/predictions/repository";
 import { PredictionShare } from "@/components/predictions/prediction-share";
 import { PhaseRefresh } from "@/components/editions/phase-refresh";
+import { ScoringRulesDialog } from "@/components/predictions/scoring-rules-dialog";
 
 const places = [
   "Miss France",
@@ -177,7 +178,7 @@ export function PredictionComposer({ editionSlug, candidates, prediction }: Pred
       <PhaseRefresh />
       <header className="relative overflow-hidden rounded-3xl border border-gold/20 bg-[radial-gradient(ellipse_at_80%_20%,rgba(200,164,93,0.16),transparent_42%),linear-gradient(120deg,#1a1711,#11100e)] px-6 py-9 sm:px-10 sm:py-12">
         <div aria-hidden="true" className="absolute -right-16 -top-16 h-64 w-64 rounded-full border border-gold/10" />
-        <p className="section-eyebrow inline-flex items-center gap-2"><Crown size={14} /> Édition 2027</p>
+        <div className="flex flex-wrap items-center justify-between gap-3"><p className="section-eyebrow inline-flex items-center gap-2"><Crown size={14} /> Édition 2027</p><ScoringRulesDialog rules={prediction.scoringRules} /></div>
         <h1 className="mt-4 max-w-3xl font-display text-4xl leading-[1.02] tracking-[-0.025em] text-champagne sm:text-5xl lg:text-6xl">
           Votre Top 12<span className="gold-text italic">.</span>
         </h1>

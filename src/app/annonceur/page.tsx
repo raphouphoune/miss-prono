@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { ArrowRight, Radio, RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ArrowRight, Radio, RotateCcw } from "lucide-react";
 import { publishCandidateAnnouncement, retractCandidateAnnouncement } from "@/features/ceremony/actions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { PhaseRefresh } from "@/components/editions/phase-refresh";
@@ -36,6 +37,7 @@ export default async function AnnouncerPage({ searchParams }: { searchParams: Pr
   const phaseLabel = currentType === "semi_finalists" ? `Demi-finalistes · ${top12Count}/12` : currentType === "finalists" ? `Finalistes · ${finalistsCount}/5` : currentType === "placement" ? `Places officielles · ${placedCount}/5` : "Cérémonie complète";
   const isLive = edition.status === "live";
   return <main className="section-wrap min-h-[70vh] max-w-3xl"><PhaseRefresh />
+    <Link href="/profil" className="mb-5 inline-flex items-center gap-2 text-sm text-muted transition hover:text-champagne"><ArrowLeft size={16} /> Retour au profil</Link>
     <header className="mb-8 border-b border-white/10 pb-7"><p className="section-eyebrow">Miss France {edition.year} · console mobile</p><h1 className="section-title">Relais de cérémonie</h1><p className="mt-3 text-sm leading-6 text-muted">Publie chaque annonce dès sa confirmation. Les points se recalculent automatiquement, et les membres voient les choix révélés dans leurs ligues.</p></header>
     {message && <p role="status" className="mb-5 rounded-xl border border-gold/20 bg-gold/[0.06] p-4 text-sm text-champagne">{message}</p>}
     <section className="rounded-2xl border border-gold/20 bg-surface/70 p-5 sm:p-7">
